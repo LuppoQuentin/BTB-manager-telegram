@@ -3,6 +3,7 @@ import os
 import subprocess
 from time import sleep
 from typing import List, Optional
+from forex_python.converter import CurrencyRates
 
 import psutil
 import telegram
@@ -249,9 +250,19 @@ def get_custom_scripts_keyboard():
     return keyboard, custom_script_exist, message
 
 
-def load_custom_currency():
+def load_custom_settings():
     try:
-        with open('config/custom.json') as json_file:
+        with open("config/custom.json") as json_file:
             return json.load(json_file)
     except:
         return {"Custom_Currency_Enabled": 0}
+
+
+def convert_custom_currency():
+    custom_currency = load_custom_settings()["Currency"]
+    c = CurrencyRates()
+    try:
+        custom_rate = c.get_rate("USD", custom_currency)
+        return {"Custom_Currency": custom_currency, "Converted_Rate": custom_rate}
+    except:
+        return False
