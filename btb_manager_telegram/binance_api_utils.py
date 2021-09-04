@@ -75,7 +75,7 @@ def get_wallet_balance():
         if coin["free"] != "0.00000000" and coin["free"] != "0.00"
     ]
     for item in balances:
-        if item["asset"] != "USDT":
+        if item["asset"] != "USDT" or item["asset"] != "BUSD":
             priceToBTC = client.get_avg_price(symbol=item["asset"] + "BTC")["price"]
             item["totalInBTC"] = round(float(priceToBTC), 8) * round(
                 float(item["free"]), 8
@@ -85,9 +85,8 @@ def get_wallet_balance():
             item["totalInGBP"] = round(total, 2)
     walletInusd = []
     for item in balances:
-        if item["asset"] != "USDT":
+        if item["asset"] != "USDT" or item["asset"] != "BUSD":
             walletInusd.append(item["totalInGBP"])
-
     return {
         "timestamp": client.get_account()["updateTime"],
         "walletInusd": sum(walletInusd),
