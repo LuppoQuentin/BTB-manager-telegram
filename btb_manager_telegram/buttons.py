@@ -7,7 +7,7 @@ from dateutil import tz
 
 
 from btb_manager_telegram import BOUGHT, BUYING, SELLING, SOLD, logger, settings
-from btb_manager_telegram.binance_api_utils import get_current_price
+from btb_manager_telegram.binance_api_utils import get_current_price, get_wallet_balance
 from btb_manager_telegram.utils import (
     find_and_kill_binance_trade_bot_process,
     format_float,
@@ -17,17 +17,14 @@ from btb_manager_telegram.utils import (
     telegram_text_truncator,
     load_custom_settings,
     convert_custom_currency,
+    custom_timezone,
 )
 
-if load_custom_settings()["Custom_Timezone_Enabled"]:
-    # INPUT AVAILABLE from: pytz.all_timezones
-    # common : "Europe/London" "Europe/Paris" "Europe/Madrid" 'America/New_York'...
-    TIMEZONE_WANTED = load_custom_settings()["Timezone"]
-    FROM_ZONE = tz.gettz("UTC")
-else:
-    TIMEZONE_WANTED = "UTC"
-    FROM_ZONE = tz.gettz("UTC")
-TO_ZONE = tz.gettz(TIMEZONE_WANTED)
+try:
+    FROM_ZONE = custom_timezone()["from_zone"]
+    TO_ZONE = custom_timezone()["to_zone"]
+except:
+    print("custom_timezone_key_not_set")
 
 
 def current_value():
@@ -183,6 +180,7 @@ def current_value():
 
                 message = telegram_text_truncator(m_list)
                 con.close()
+
             except Exception as e:
                 logger.error(
                     f"❌ Something went wrong, unable to generate value at this time: {e}",
@@ -197,6 +195,24 @@ def current_value():
                 f"❌ Unable to perform actions on the database: {e}", exc_info=True
             )
             message = ["❌ Unable to perform actions on the database\."]
+    return message
+
+
+def wallet_value():
+    wallet_data = get_wallet_balance()
+    ts = wallet_data["timestamp"] / 1000.0
+    if load_custom_settings()["Custom_Currency_Enabled"] == True:
+        if convert_custom_currency() != False:
+            custom_currency_data = convert_custom_currency()
+    else:
+        custom_currency_data = {"Custom_Currency": "USD", "Converted_Rate": 1}
+    m_list = [
+        f"\nLast update: `{str(datetime.fromtimestamp(ts).strftime('%H:%M:%S %d/%m/%Y'))}`\n\n",
+        f"*Binance Wallet:*\n",
+        f"\t\- Estimated Balance: `{wallet_data['walletInusd'] * custom_currency_data['Converted_Rate']:.2f}` *{custom_currency_data['Custom_Currency']}*\n\n",
+    ]
+    message = telegram_text_truncator(m_list)
+
     return message
 
 
@@ -219,6 +235,9 @@ def check_progress():
 
                 # Generate message
                 m_list = ["Current coin amount progress:\n\n"]
+                if load_custom_settings()["Custom_Currency_Enabled"] == True:
+                    if convert_custom_currency() != False:
+                        custom_currency_data = convert_custom_currency()
                 for coin in query:
                     last_trade_date = datetime.strptime(coin[5], "%Y-%m-%d %H:%M:%S.%f")
                     if coin[4] is None:
@@ -240,17 +259,15 @@ def check_progress():
                         ),
                     ]
                     if load_custom_settings()["Custom_Currency_Enabled"] == True:
-                        if convert_custom_currency() != False:
-                            custom_currency_data = convert_custom_currency()
-                            sub_list.insert(
-                                3,
-                                f"\t\- Price: `{round(custom_currency_data['Converted_Rate'] * coin[2], 2)}` *{custom_currency_data['Custom_Currency']}*\n",
-                            )
-                        else:
-                            sub_list.insert(
-                                3,
-                                f"\t\- *Forex Error*\n",
-                            )
+                        sub_list.insert(
+                            3,
+                            f"\t\- Price: `{round(custom_currency_data['Converted_Rate'] * coin[2], 2)}` *{custom_currency_data['Custom_Currency']}*\n",
+                        )
+                    else:
+                        sub_list.insert(
+                            3,
+                            f"\t\- *Forex Error*\n",
+                        )
                     m_list.append(sub_list)
                 flat_m_list = ["".join(x) for x in m_list]
                 message = telegram_text_truncator(flat_m_list)
