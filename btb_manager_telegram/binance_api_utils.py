@@ -76,7 +76,10 @@ def get_wallet_balance():
     ]
     for item in balances:
         if item["asset"] != "USDT" and item["asset"] != "BUSD":
+            print('priceToBTCbefore')
+            print(item["asset"] + "BTC")
             priceToBTC = client.get_avg_price(symbol=item["asset"] + "BTC")["price"]
+            print('priceToBTCafter')
             item["totalInBTC"] = round(float(priceToBTC), 8) * round(
                 float(item["free"]), 8
             )
