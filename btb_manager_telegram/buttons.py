@@ -165,7 +165,7 @@ def current_value():
                     f"_*1 day* value change USD_: `{return_rate_1_day}` *%*\n",
                     f"_*7 days* value change USD_: `{return_rate_7_day}` *%*\n\n",
                 ]
-                if load_custom_settings()["Custom_Currency_Enabled"] == True:
+                if load_custom_settings()["Custom_Currency_Enabled"]:
                     if convert_custom_currency() != False:
                         custom_currency_data = convert_custom_currency()
                         m_list.insert(
@@ -198,10 +198,10 @@ def current_value():
     return message
 
 
-def wallet_value():
+def binanace_wallet_value():
     wallet_data = get_wallet_balance()
-    ts = wallet_data["timestamp"] / 1000.0
-    if load_custom_settings()["Custom_Currency_Enabled"] == True:
+    ts = wallet_data["timestamp"]
+    if load_custom_settings()["Custom_Currency_Enabled"]:
         if convert_custom_currency() != False:
             custom_currency_data = convert_custom_currency()
     else:
@@ -211,6 +211,11 @@ def wallet_value():
         f"*Binance Wallet:*\n",
         f"\t\- Estimated Balance: `{wallet_data['walletInusd'] * custom_currency_data['Converted_Rate']:.2f}` *{custom_currency_data['Custom_Currency']}*\n\n",
     ]
+
+    for coin in wallet_data["individualCoins"]:
+        m_list.append(
+            f"\t\- {coin['asset']}: `{coin['totalInUSD'] * custom_currency_data['Converted_Rate']:.2f}` *{custom_currency_data['Custom_Currency']}*\n"
+        )
     message = telegram_text_truncator(m_list)
 
     return message
@@ -235,7 +240,7 @@ def check_progress():
 
                 # Generate message
                 m_list = ["Current coin amount progress:\n\n"]
-                if load_custom_settings()["Custom_Currency_Enabled"] == True:
+                if load_custom_settings()["Custom_Currency_Enabled"]:
                     if convert_custom_currency() != False:
                         custom_currency_data = convert_custom_currency()
                 for coin in query:
